@@ -1,0 +1,13 @@
+[package]
+name = "marlang"
+version = "0.1.0"
+edition = "2021"
+authors = ["Federico Mora Rocha <fmora@cs.berkeley.edu>"]
+repository = "https://github.com/FedericoAureliano/marlang"
+readme = "README.md"
+license = "MIT"
+
+[dependencies]
+egg = "0.9.2"
+fxhash = "0.2.1"
+rug = { version = "1.16.0", features = ["integer", "rational"] }
