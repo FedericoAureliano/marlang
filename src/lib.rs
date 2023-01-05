@@ -1,161 +1,227 @@
-use egg::*;
-use fxhash::FxHashSet as HashSet;
+pub mod asg;
+
+use asg::*;
+use fxhash::FxBuildHasher as BuildHasher;
 use rug::{Integer, Rational};
 
-pub type MGraph = egg::EGraph<Marlang, MarAnalysis>;
-pub type MRecExpr = RecExpr<Marlang>;
-pub type MPatternAST = PatternAst<Marlang>;
-pub type MPattern = Pattern<Marlang>;
-pub type MRewrite = Rewrite<Marlang, MarAnalysis>;
-pub type MExplanation = Explanation<Marlang>;
-pub type MId = Id;
-pub type MSymbol = egg::Symbol;
+type HashMap<K, V> = hashbrown::HashMap<K, V, BuildHasher>;
 
-define_language! {
-    pub enum Marlang {
-        "var" = Var([Id; 2]),
+pub struct MarProgram {
+    asg: MId,
+    runner: MRunner,
+    rewrites: Vec<MRewrite>,
+}
 
-        // BEGIN N-ARY
-        "+" = Add([Id; 1]),
-        "-" = Sub([Id; 1]),
-        "*" = Mul([Id; 1]),
-        "/" = RealDiv([Id; 1]),
+impl MarProgram {
+    pub fn mk_var(&mut self, name: String, sort: MId) -> MId {
+        let x = self.mk_symbol(name);
+        self.add(Marlang::Var([x, sort]))
+    }
 
-        "=" = Eq([Id; 1]),
-        ">" = Gt([Id; 1]),
-        ">=" = Ge([Id; 1]),
-        "<" = Lt([Id; 1]),
-        "<=" = Le([Id; 1]),
+    pub fn mk_add(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Add([folded]))
+    }
 
-        "str.++" = Concat([Id; 1]),
+    pub fn mk_sub(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Sub([folded]))
+    }
 
-        "and" = And([Id; 1]),
-        "or" = Or([Id; 1]),
-        "xor" = Xor([Id; 1]),
-        // END N-ARY
+    pub fn mk_mul(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Mul([folded]))
+    }
 
-        "not" = Not([Id; 1]),
-        "=>" = Implies([Id; 2]),
-        "ite" = Ite([Id; 3]),
+    pub fn mk_div(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::RealDiv([folded]))
+    }
 
-        "set-logic" = SetLogic([Id; 1]),
-        "check-sat" = CheckSat,
-        "assert" = Assert([Id; 1]),
-        "declare-const" = DeclareFun([Id; 2]),
+    pub fn mk_eq(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Eq([folded]))
+    }
 
-        "CONS" = Cons([Id; 2]),
-        "NIL" = Nil,
+    pub fn mk_gt(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Gt([folded]))
+    }
 
-        "Bool" = BoolSort,
-        "Int" = IntSort,
-        "Real" = RealSort,
-        "String" = StringSort,
+    pub fn mk_ge(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Ge([folded]))
+    }
 
-        BoolVal(bool),
-        IntVal(Integer),
-        RealVal(Rational),
-        StringVal(String),
+    pub fn mk_lt(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Lt([folded]))
+    }
 
-        Symbol(MSymbol),
+    pub fn mk_le(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Le([folded]))
+    }
+
+    pub fn mk_concat(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Concat([folded]))
+    }
+
+    pub fn mk_and(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::And([folded]))
+    }
+
+    pub fn mk_or(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Or([folded]))
+    }
+
+    pub fn mk_xor(&mut self, args: Vec<MId>) -> MId {
+        let folded = self.fold(args);
+        self.add(Marlang::Xor([folded]))
+    }
+
+    pub fn mk_not(&mut self, arg: MId) -> MId {
+        self.add(Marlang::Not([arg]))
+    }
+
+    pub fn mk_implies(&mut self, x: MId, y: MId) -> MId {
+        self.add(Marlang::Implies([x, y]))
+    }
+
+    pub fn mk_ite(&mut self, x: MId, y: MId, z: MId) -> MId {
+        self.add(Marlang::Ite([x, y, z]))
+    }
+
+    pub fn set_logic(&mut self, logic: String) {
+        let logic = self.mk_symbol(logic);
+        let a = self.add(Marlang::SetLogic([logic]));
+        let c = self.add(Marlang::Cons([a, self.asg]));
+        self.asg = c;
+    }
+
+    pub fn check_sat(&mut self) {
+        let a = self.add(Marlang::CheckSat);
+        let c = self.add(Marlang::Cons([a, self.asg]));
+        self.asg = c;
+    }
+
+    pub fn assert(&mut self, expr: MId) {
+        let a = self.add(Marlang::Assert([expr]));
+        let c = self.add(Marlang::Cons([a, self.asg]));
+        self.asg = c;
+    }
+
+    pub fn declare_const(&mut self, name: String, sort: MId) {
+        let x = self.mk_symbol(name);
+        let a = self.add(Marlang::DeclareFun([x, sort]));
+        let c = self.add(Marlang::Cons([a, self.asg]));
+        self.asg = c;
+    }
+
+    pub fn bool_sort(&mut self) -> MId {
+        self.add(Marlang::BoolSort)
+    }
+
+    pub fn int_sort(&mut self) -> MId {
+        self.add(Marlang::IntSort)
+    }
+
+    pub fn real_sort(&mut self) -> MId {
+        self.add(Marlang::RealSort)
+    }
+
+    pub fn string_sort(&mut self) -> MId {
+        self.add(Marlang::StringSort)
+    }
+
+    pub fn mk_bool(&mut self, i: bool) -> MId {
+        self.add(Marlang::BoolVal(i))
+    }
+
+    pub fn mk_int(&mut self, i: Integer) -> MId {
+        self.add(Marlang::IntVal(i))
+    }
+
+    pub fn mk_real(&mut self, i: Rational) -> MId {
+        self.add(Marlang::RealVal(i))
+    }
+
+    pub fn mk_string(&mut self, i: String) -> MId {
+        self.add(Marlang::StringVal(i))
+    }
+
+    pub fn mk_symbol(&mut self, name: String) -> MId {
+        self.add(Marlang::Symbol(name.into()))
     }
 }
 
-#[derive(Default)]
-pub struct MarAnalysis;
-
-#[derive(Debug)]
-pub struct MData {
-    free: HashSet<Id>,
-    constant: Option<(Marlang, MPatternAST)>,
-}
-
-fn eval(_mgraph: &MGraph, _mnode: &Marlang) -> Option<(Marlang, MPatternAST)> {
-    // TODO: write eval
-    None
-}
-
-impl Analysis<Marlang> for MarAnalysis {
-    type Data = MData;
-    fn merge(&mut self, to: &mut MData, from: MData) -> DidMerge {
-        let before_len = to.free.len();
-        // to.free.extend(from.free);
-        to.free.retain(|i| from.free.contains(i));
-        // compare lengths to see if I changed to or from
-        DidMerge(
-            before_len != to.free.len(),
-            to.free.len() != from.free.len(),
-        ) | merge_option(&mut to.constant, from.constant, |a, b| {
-            assert_eq!(a.0, b.0, "Merged non-equal constants");
-            DidMerge(false, false)
-        })
-    }
-
-    fn make(egraph: &MGraph, enode: &Marlang) -> MData {
-        let mut free = HashSet::default();
-        enode.for_each(|c| free.extend(&egraph[c].data.free));
-        let constant = eval(egraph, enode);
-        MData { constant, free }
-    }
-
-    fn modify(egraph: &mut MGraph, id: Id) {
-        if let Some(c) = egraph[id].data.constant.clone() {
-            if egraph.are_explanations_enabled() {
-                egraph.union_instantiations(
-                    &c.0.to_string().parse().unwrap(),
-                    &c.1,
-                    &Default::default(),
-                    "analysis".to_string(),
-                );
-            } else {
-                let const_id = egraph.add(c.0);
-                egraph.union(id, const_id);
-            }
+impl MarProgram {
+    pub fn new() -> Self {
+        let mut mgraph = MGraph::default().with_explanations_enabled();
+        Self {
+            asg: mgraph.add(Marlang::Nil),
+            rewrites: vec![],
+            runner: MRunner::default().with_egraph(mgraph),
         }
     }
-}
 
-pub fn make_rules(rewrites: Vec<(String, MPattern, MPattern)>) -> Vec<MRewrite> {
-    let mut rules = vec![];
-
-    for (name, left, right) in rewrites {
-        rules.push(rewrite!(name; left => right))
+    pub fn extract(&self) -> MRecExpr {
+        let extractor = egg::Extractor::new(&self.runner.egraph, egg::AstSize);
+        let (_, best_expr) = extractor.find_best(self.asg);
+        best_expr
     }
 
-    rules
-}
+    pub fn get_expr(&self, expr: MId) -> MRecExpr {
+        self.runner.egraph.id_to_expr(expr)
+    }
 
-pub fn simplify(
-    expr: MId,
-    egraph: MGraph,
-    rewrites: Vec<(String, MPattern, MPattern)>,
-    iter_limit: usize,
-) -> MRecExpr {
-    let runner = Runner::default()
-        .with_egraph(egraph)
-        .with_iter_limit(iter_limit)
-        .run(&make_rules(rewrites));
-    let extractor = Extractor::new(&runner.egraph, AstSize);
+    pub fn get_pattern(&self, expr: MId, subs: Vec<MId>) -> MPattern {
+        let mut subs_map = HashMap::default();
+        for x in subs.into_iter() {
+            subs_map.insert(x, x);
+        }
+        let (p, _) = self.runner.egraph.id_to_pattern(expr, &subs_map);
+        p
+    }
 
-    let (_, best) = extractor.find_best(expr);
-    best
-}
+    pub fn add_rewrite(&mut self, name: String, left: MPattern, right: MPattern) {
+        self.rewrites.push(egg::rewrite!(name; left => right))
+    }
 
-pub fn simplify_and_explain(
-    expr: MId,
-    egraph: MGraph,
-    rewrites: Vec<(String, MPattern, MPattern)>,
-    iter_limit: usize,
-) -> (MRecExpr, MExplanation) {
-    let original = egraph.id_to_expr(expr);
+    pub fn simplify(self, iter_limit: usize) -> Self {
+        let runner: MRunner = MRunner::default()
+            .with_egraph(self.runner.egraph)
+            .with_iter_limit(iter_limit)
+            .run(&self.rewrites);
+        Self {
+            runner,
+            rewrites: self.rewrites,
+            asg: self.asg,
+        }
+    }
 
-    let mut runner = Runner::default()
-        .with_egraph(egraph)
-        .with_iter_limit(iter_limit)
-        .run(&make_rules(rewrites));
-    let extractor = Extractor::new(&runner.egraph, AstSize);
+    pub fn equiv(&self, left: MRecExpr, right: MRecExpr) -> bool {
+        let equivs = self.runner.egraph.equivs(&left, &right);
+        equivs.len() > 0
+    }
 
-    let (_, best) = extractor.find_best(expr);
+    pub fn explain_equivalence(&mut self, left: MRecExpr, right: MRecExpr) -> MExplanation {
+        self.runner.egraph.explain_equivalence(&left, &right)
+    }
 
-    let explain = runner.explain_equivalence(&original, &best);
-    (best, explain)
+    fn fold(&mut self, args: Vec<MId>) -> MId {
+        let start = self.add(Marlang::Nil);
+        args.iter()
+            .rev()
+            .fold(start, |acc, x| self.add(Marlang::Cons([*x, acc])))
+    }
+
+    fn add(&mut self, x: Marlang) -> MId {
+        let out = self.runner.egraph.add(x);
+        self.runner.egraph.rebuild();
+        out
+    }
 }
