@@ -7,7 +7,7 @@ use rug::{Integer, Rational};
 type HashMap<K, V> = hashbrown::HashMap<K, V, BuildHasher>;
 
 pub struct MarProgram {
-    asg: MId,
+    commands: Vec<MId>,
     runner: MRunner,
     rewrites: Vec<MRewrite>,
 }
@@ -97,28 +97,24 @@ impl MarProgram {
 
     pub fn set_logic(&mut self, logic: String) {
         let logic = self.mk_symbol(logic);
-        let a = self.add(Marlang::SetLogic([logic]));
-        let c = self.add(Marlang::Cons([a, self.asg]));
-        self.asg = c;
+        let command = self.add(Marlang::SetLogic([logic]));
+        self.commands.push(command)
     }
 
     pub fn check_sat(&mut self) {
-        let a = self.add(Marlang::CheckSat);
-        let c = self.add(Marlang::Cons([a, self.asg]));
-        self.asg = c;
+        let command = self.add(Marlang::CheckSat);
+        self.commands.push(command)
     }
 
     pub fn assert(&mut self, expr: MId) {
-        let a = self.add(Marlang::Assert([expr]));
-        let c = self.add(Marlang::Cons([a, self.asg]));
-        self.asg = c;
+        let command = self.add(Marlang::Assert([expr]));
+        self.commands.push(command)
     }
 
     pub fn declare_const(&mut self, name: String, sort: MId) {
         let x = self.mk_symbol(name);
-        let a = self.add(Marlang::DeclareConst([x, sort]));
-        let c = self.add(Marlang::Cons([a, self.asg]));
-        self.asg = c;
+        let command = self.add(Marlang::DeclareConst([x, sort]));
+        self.commands.push(command)
     }
 
     pub fn bool_sort(&mut self) -> MId {
@@ -160,17 +156,18 @@ impl MarProgram {
 
 impl MarProgram {
     pub fn new() -> Self {
-        let mut mgraph = MGraph::default().with_explanations_enabled();
+        let mgraph = MGraph::default().with_explanations_enabled();
         Self {
-            asg: mgraph.add(Marlang::Nil),
+            commands: vec![],
             rewrites: vec![],
             runner: MRunner::default().with_egraph(mgraph),
         }
     }
 
-    pub fn extract(&self) -> MRecExpr {
+    pub fn extract(&mut self) -> MRecExpr {
+        let asg = self.fold(self.commands.clone());
         let extractor = egg::Extractor::new(&self.runner.egraph, egg::AstSize);
-        let (_, best_expr) = extractor.find_best(self.asg);
+        let (_, best_expr) = extractor.find_best(asg);
         best_expr
     }
 
@@ -199,7 +196,7 @@ impl MarProgram {
         Self {
             runner,
             rewrites: self.rewrites,
-            asg: self.asg,
+            commands: self.commands,
         }
     }
 

@@ -21,7 +21,7 @@ fn add_zero() {
     let right = program.get_pattern(x, vec![x]);
     program.add_rewrite("add-zero".into(), left, right);
 
-    let program = program.simplify(1);
+    let mut program = program.simplify(1);
 
     assert_eq!(
         program.extract().to_string(),
