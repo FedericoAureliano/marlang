@@ -43,7 +43,7 @@ define_language! {
         "set-logic" = SetLogic([Id; 1]),
         "check-sat" = CheckSat,
         "assert" = Assert([Id; 1]),
-        "declare-const" = DeclareFun([Id; 2]),
+        "declare-const" = DeclareConst([Id; 2]),
 
         "CONS" = Cons([Id; 2]),
         "NIL" = Nil,

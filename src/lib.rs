@@ -116,7 +116,7 @@ impl MarProgram {
 
     pub fn declare_const(&mut self, name: String, sort: MId) {
         let x = self.mk_symbol(name);
-        let a = self.add(Marlang::DeclareFun([x, sort]));
+        let a = self.add(Marlang::DeclareConst([x, sort]));
         let c = self.add(Marlang::Cons([a, self.asg]));
         self.asg = c;
     }
