@@ -95,41 +95,37 @@ impl MarProgram {
         self.add(Marlang::Ite([x, y, z]))
     }
 
-    pub fn set_logic(&mut self, logic: String) {
+    pub fn mk_set_logic(&mut self, logic: String) -> MId {
         let logic = self.mk_symbol(logic);
-        let command = self.add(Marlang::SetLogic([logic]));
-        self.commands.push(command)
+        self.add(Marlang::SetLogic([logic]))
     }
 
-    pub fn check_sat(&mut self) {
-        let command = self.add(Marlang::CheckSat);
-        self.commands.push(command)
+    pub fn mk_check_sat(&mut self) -> MId {
+        self.add(Marlang::CheckSat)
     }
 
-    pub fn assert(&mut self, expr: MId) {
-        let command = self.add(Marlang::Assert([expr]));
-        self.commands.push(command)
+    pub fn mk_assert(&mut self, expr: MId) -> MId {
+        self.add(Marlang::Assert([expr]))
     }
 
-    pub fn declare_const(&mut self, name: String, sort: MId) {
+    pub fn mk_declare_const(&mut self, name: String, sort: MId) -> MId {
         let x = self.mk_symbol(name);
-        let command = self.add(Marlang::DeclareConst([x, sort]));
-        self.commands.push(command)
+        self.add(Marlang::DeclareConst([x, sort]))
     }
 
-    pub fn bool_sort(&mut self) -> MId {
+    pub fn mk_bool_sort(&mut self) -> MId {
         self.add(Marlang::BoolSort)
     }
 
-    pub fn int_sort(&mut self) -> MId {
+    pub fn mk_int_sort(&mut self) -> MId {
         self.add(Marlang::IntSort)
     }
 
-    pub fn real_sort(&mut self) -> MId {
+    pub fn mk_real_sort(&mut self) -> MId {
         self.add(Marlang::RealSort)
     }
 
-    pub fn string_sort(&mut self) -> MId {
+    pub fn mk_string_sort(&mut self) -> MId {
         self.add(Marlang::StringSort)
     }
 
@@ -151,6 +147,28 @@ impl MarProgram {
 
     pub fn mk_symbol(&mut self, name: String) -> MId {
         self.add(Marlang::Symbol(name.into()))
+    }
+}
+
+impl MarProgram {
+    pub fn set_logic(&mut self, logic: String) {
+        let c = self.mk_set_logic(logic);
+        self.commands.push(c)
+    }
+
+    pub fn check_sat(&mut self) {
+        let c = self.mk_check_sat();
+        self.commands.push(c)
+    }
+
+    pub fn assert(&mut self, expr: MId) {
+        let c = self.mk_assert(expr);
+        self.commands.push(c)
+    }
+
+    pub fn declare_const(&mut self, name: String, sort: MId) {
+        let c = self.mk_declare_const(name, sort);
+        self.commands.push(c)
     }
 }
 
