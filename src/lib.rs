@@ -231,11 +231,19 @@ impl MarProgram {
         self.runner.egraph.explain_equivalence(&left, &right)
     }
 
-    pub fn fold(&mut self, args: Vec<MId>) -> MId {
-        let start = self.add(Marlang::Nil);
+    fn fold(&mut self, args: Vec<MId>) -> MId {
+        let start = self.mk_nil();
         args.iter()
             .rev()
-            .fold(start, |acc, x| self.add(Marlang::Cons([*x, acc])))
+            .fold(start, |acc, x| self.mk_cons(*x, acc))
+    }
+
+    pub fn mk_cons(&mut self, x: MId, y: MId) -> MId {
+        self.add(Marlang::Cons([x, y]))
+    }
+
+    pub fn mk_nil(&mut self) -> MId {
+        self.add(Marlang::Nil)
     }
 
     fn add(&mut self, x: Marlang) -> MId {
