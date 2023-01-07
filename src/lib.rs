@@ -164,8 +164,12 @@ impl MarProgram {
         }
     }
 
+    pub fn asg(&mut self) -> MId {
+        self.fold(self.commands.clone())
+    }
+
     pub fn extract(&mut self) -> MRecExpr {
-        let asg = self.fold(self.commands.clone());
+        let asg = self.asg();
         let extractor = egg::Extractor::new(&self.runner.egraph, egg::AstSize);
         let (_, best_expr) = extractor.find_best(asg);
         best_expr
