@@ -231,7 +231,7 @@ impl MarProgram {
         self.runner.egraph.explain_equivalence(&left, &right)
     }
 
-    fn fold(&mut self, args: Vec<MId>) -> MId {
+    pub fn fold(&mut self, args: Vec<MId>) -> MId {
         let start = self.add(Marlang::Nil);
         args.iter()
             .rev()
