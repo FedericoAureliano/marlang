@@ -34,6 +34,8 @@ define_language! {
         "and" = And([Id; 1]),
         "or" = Or([Id; 1]),
         "xor" = Xor([Id; 1]),
+
+        "let" = Let([Id; 2]), // takes a list of lists (bindings) and a body
         // END N-ARY
 
         "not" = Not([Id; 1]),

@@ -83,6 +83,18 @@ impl MarProgram {
         self.add(Marlang::Xor([folded]))
     }
 
+    pub fn mk_let(&mut self, bindings: Vec<(String, MId)>, body: MId) -> MId {
+        let bindings: Vec<MId> = bindings
+            .into_iter()
+            .map(|(name, value)| {
+                let name = self.mk_symbol(name);
+                self.fold(vec![name, value])
+            })
+            .collect();
+        let bindings = self.fold(bindings);
+        self.add(Marlang::Let([bindings, body]))
+    }
+
     pub fn mk_not(&mut self, arg: MId) -> MId {
         self.add(Marlang::Not([arg]))
     }
