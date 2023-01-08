@@ -160,6 +160,14 @@ impl MarProgram {
     pub fn mk_symbol(&mut self, name: String) -> MId {
         self.add(Marlang::Symbol(name.into()))
     }
+
+    pub fn mk_cons(&mut self, x: MId, y: MId) -> MId {
+        self.add(Marlang::Cons([x, y]))
+    }
+
+    pub fn mk_nil(&mut self) -> MId {
+        self.add(Marlang::Nil)
+    }
 }
 
 impl MarProgram {
@@ -181,6 +189,59 @@ impl MarProgram {
     pub fn declare_const(&mut self, name: String, sort: MId) {
         let c = self.mk_declare_const(name, sort);
         self.commands.push(c)
+    }
+}
+
+impl MarProgram {
+    pub fn infer_sort(&mut self, term: MId) -> MId {
+        let mexpr = self.get_expr(term);
+        let last = mexpr.as_ref().len() - 1;
+        self.infer_sort_rec(&mexpr, last)
+    }
+
+    fn infer_sort_rec(&mut self, expr: &MRecExpr, i: usize) -> MId {
+        let node = &expr.as_ref()[i];
+        match node {
+            Marlang::Var([_, s]) => *s,
+
+            Marlang::Add([args]) => self.decompose(*args)[0],
+            Marlang::Sub([args]) => self.decompose(*args)[0],
+            Marlang::Mul([args]) => self.decompose(*args)[0],
+            
+            Marlang::Eq(_)
+            | Marlang::Gt(_)
+            | Marlang::Ge(_)
+            | Marlang::Lt(_)
+            | Marlang::Le(_)
+            | Marlang::And(_)
+            | Marlang::Or(_)
+            | Marlang::Xor(_)
+            | Marlang::Not(_)
+            | Marlang::Implies(_) => self.mk_bool_sort(),
+            
+            Marlang::RealDiv(_) => self.mk_real_sort(),
+            Marlang::Concat(_) => self.mk_string_sort(),
+
+            Marlang::Ite([_, y, _]) => self.infer_sort_rec(expr, (*y).into()),
+            Marlang::Let([_bindings, body]) => self.infer_sort_rec(expr, (*body).into()),
+
+            Marlang::SetLogic(_)
+            | Marlang::CheckSat
+            | Marlang::Assert(_)
+            | Marlang::DeclareConst(_)
+            | Marlang::Cons(_)
+            | Marlang::Nil
+            | Marlang::BoolSort
+            | Marlang::IntSort
+            | Marlang::RealSort
+            | Marlang::Symbol(_)
+            | Marlang::StringSort => unreachable!("Should never check sort of commands!"),
+
+            Marlang::BoolVal(_) => self.mk_bool_sort(),
+            Marlang::IntVal(_) => self.mk_int_sort(),
+            Marlang::RealVal(_) => self.mk_real_sort(),
+            Marlang::StringVal(_) => self.mk_string_sort(),
+        }
     }
 }
 
@@ -242,7 +303,9 @@ impl MarProgram {
     pub fn explain_equivalence(&mut self, left: MRecExpr, right: MRecExpr) -> MExplanation {
         self.runner.egraph.explain_equivalence(&left, &right)
     }
+}
 
+impl MarProgram {
     fn fold(&mut self, args: Vec<MId>) -> MId {
         let start = self.mk_nil();
         args.iter()
@@ -250,12 +313,23 @@ impl MarProgram {
             .fold(start, |acc, x| self.mk_cons(*x, acc))
     }
 
-    pub fn mk_cons(&mut self, x: MId, y: MId) -> MId {
-        self.add(Marlang::Cons([x, y]))
+    fn decompose(&self, ls: MId) -> Vec<MId> {
+        let mexpr = self.get_expr(ls);
+        let last = mexpr.as_ref().len() - 1;
+        self.decompose_rec(mexpr, last)
     }
 
-    pub fn mk_nil(&mut self) -> MId {
-        self.add(Marlang::Nil)
+    fn decompose_rec(&self, ls: MRecExpr, i: usize) -> Vec<MId> {
+        match ls.as_ref()[i] {
+            Marlang::Cons([x, s]) => {
+                let mut x = vec![x];
+                let mut rest = self.decompose_rec(ls, s.into());
+                x.append(&mut rest);
+                x
+            },
+            Marlang::Nil => vec![],
+            _ => unreachable!("Should never decompose a non-list!")
+        }
     }
 
     fn add(&mut self, x: Marlang) -> MId {
