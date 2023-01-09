@@ -135,14 +135,20 @@ impl MarProgram {
         self.add(Marlang::DeclareFun([f, params, sort]))
     }
 
-    pub fn mk_define_fun(&mut self, name: String, params: Vec<(String, MId)>, sort: MId, body: MId) -> MId {
+    pub fn mk_define_fun(
+        &mut self,
+        name: String,
+        params: Vec<(String, MId)>,
+        sort: MId,
+        body: MId,
+    ) -> MId {
         let params: Vec<MId> = params
-        .into_iter()
-        .map(|(name, value)| {
-            let name = self.mk_symbol(name);
-            self.fold(vec![name, value])
-        })
-        .collect();
+            .into_iter()
+            .map(|(name, value)| {
+                let name = self.mk_symbol(name);
+                self.fold(vec![name, value])
+            })
+            .collect();
         let params = self.fold(params);
         let f = self.mk_symbol(name);
         self.add(Marlang::DefineFun([f, params, sort, body]))
@@ -225,19 +231,32 @@ impl MarProgram {
 
 impl MarProgram {
     pub fn infer_sort(&mut self, term: MId) -> MId {
+        self.runner.egraph.rebuild();
         let mexpr = self.get_expr(term);
         let last = mexpr.as_ref().len() - 1;
+        println!("{:?}\nlast: {}", mexpr, last);
         self.infer_sort_rec(&mexpr, last)
+    }
+
+    fn sort_to_id(&mut self, expr: &MRecExpr, sort: usize) -> MId {
+        let node = &expr.as_ref()[sort];
+        match node {
+            Marlang::BoolSort => self.mk_bool_sort(),
+            Marlang::IntSort => self.mk_int_sort(),
+            Marlang::RealSort => self.mk_real_sort(),
+            Marlang::StringSort => self.mk_string_sort(),
+            _ => unreachable!("Must be a sort!"),
+        }
     }
 
     fn infer_sort_rec(&mut self, expr: &MRecExpr, i: usize) -> MId {
         let node = &expr.as_ref()[i];
         match node {
-            Marlang::Var([_, s]) => *s,
+            Marlang::Var([_, s]) => self.sort_to_id(expr, (*s).into()),
 
-            Marlang::Add([args]) => decompose(expr, *args)[0],
-            Marlang::Sub([args]) => decompose(expr, *args)[0],
-            Marlang::Mul([args]) => decompose(expr, *args)[0],
+            Marlang::Add([args]) => self.infer_sort_rec(expr, decompose(expr, *args)[0].into()),
+            Marlang::Sub([args]) => self.infer_sort_rec(expr, decompose(expr, *args)[0].into()),
+            Marlang::Mul([args]) => self.infer_sort_rec(expr, decompose(expr, *args)[0].into()),
 
             Marlang::Eq(_)
             | Marlang::Gt(_)
@@ -262,7 +281,7 @@ impl MarProgram {
                     assert_eq!(pair.len(), 2);
                     let name: usize = pair[0].into();
                     let name = &expr.as_ref()[name];
-                    let sort = pair[1];
+                    let sort = self.sort_to_id(expr, pair[1].into());
                     match name {
                         Marlang::Symbol(s) => self.symbol_table.insert(s.to_string(), sort),
                         _ => {
@@ -341,7 +360,8 @@ impl MarProgram {
         self.rewrites.push(egg::rewrite!(name; left => right))
     }
 
-    pub fn simplify(self, iter_limit: usize) -> Self {
+    pub fn simplify(mut self, iter_limit: usize) -> Self {
+        self.runner.egraph.rebuild();
         if self.rewrites.len() > 0 {
             let runner: MRunner = MRunner::default()
                 .with_egraph(self.runner.egraph)
