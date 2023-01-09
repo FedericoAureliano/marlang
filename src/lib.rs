@@ -4,12 +4,16 @@ use asg::*;
 use fxhash::FxBuildHasher as BuildHasher;
 use rug::{Integer, Rational};
 
+use ahash::AHashMap;
+use std::{borrow::Borrow, hash::Hash};
+
 type HashMap<K, V> = hashbrown::HashMap<K, V, BuildHasher>;
 
 pub struct MarProgram {
     commands: Vec<MId>,
     runner: MRunner,
     rewrites: Vec<MRewrite>,
+    symbol_table: SymbolTable<String, MId>,
 }
 
 impl MarProgram {
@@ -125,6 +129,25 @@ impl MarProgram {
         self.add(Marlang::DeclareConst([x, sort]))
     }
 
+    pub fn mk_declare_fun(&mut self, name: String, params: Vec<MId>, sort: MId) -> MId {
+        let params = self.fold(params);
+        let f = self.mk_symbol(name);
+        self.add(Marlang::DeclareFun([f, params, sort]))
+    }
+
+    pub fn mk_define_fun(&mut self, name: String, params: Vec<(String, MId)>, sort: MId, body: MId) -> MId {
+        let params: Vec<MId> = params
+        .into_iter()
+        .map(|(name, value)| {
+            let name = self.mk_symbol(name);
+            self.fold(vec![name, value])
+        })
+        .collect();
+        let params = self.fold(params);
+        let f = self.mk_symbol(name);
+        self.add(Marlang::DefineFun([f, params, sort, body]))
+    }
+
     pub fn mk_bool_sort(&mut self) -> MId {
         self.add(Marlang::BoolSort)
     }
@@ -168,6 +191,10 @@ impl MarProgram {
     pub fn mk_nil(&mut self) -> MId {
         self.add(Marlang::Nil)
     }
+
+    pub fn mk_rest(&mut self) -> MId {
+        self.mk_symbol("?MARLANG_REST_PATTERN".into())
+    }
 }
 
 impl MarProgram {
@@ -190,6 +217,10 @@ impl MarProgram {
         let c = self.mk_declare_const(name, sort);
         self.commands.push(c)
     }
+
+    pub fn commit(&mut self, command: MId) {
+        self.commands.push(command)
+    }
 }
 
 impl MarProgram {
@@ -204,10 +235,10 @@ impl MarProgram {
         match node {
             Marlang::Var([_, s]) => *s,
 
-            Marlang::Add([args]) => self.decompose(*args)[0],
-            Marlang::Sub([args]) => self.decompose(*args)[0],
-            Marlang::Mul([args]) => self.decompose(*args)[0],
-            
+            Marlang::Add([args]) => decompose(expr, *args)[0],
+            Marlang::Sub([args]) => decompose(expr, *args)[0],
+            Marlang::Mul([args]) => decompose(expr, *args)[0],
+
             Marlang::Eq(_)
             | Marlang::Gt(_)
             | Marlang::Ge(_)
@@ -218,23 +249,48 @@ impl MarProgram {
             | Marlang::Xor(_)
             | Marlang::Not(_)
             | Marlang::Implies(_) => self.mk_bool_sort(),
-            
+
             Marlang::RealDiv(_) => self.mk_real_sort(),
             Marlang::Concat(_) => self.mk_string_sort(),
 
             Marlang::Ite([_, y, _]) => self.infer_sort_rec(expr, (*y).into()),
-            Marlang::Let([_bindings, body]) => self.infer_sort_rec(expr, (*body).into()),
+
+            Marlang::Let([bindings, body]) => {
+                let bindings = decompose(expr, (*bindings).into());
+                for b in bindings {
+                    let pair = decompose(expr, b.into());
+                    assert_eq!(pair.len(), 2);
+                    let name: usize = pair[0].into();
+                    let name = &expr.as_ref()[name];
+                    let sort = pair[1];
+                    match name {
+                        Marlang::Symbol(s) => self.symbol_table.insert(s.to_string(), sort),
+                        _ => {
+                            panic!("Let-binding must be a name but got {name}!")
+                        }
+                    }
+                }
+                self.infer_sort_rec(expr, (*body).into())
+            }
+
+            Marlang::Symbol(n) => match self.symbol_table.get(&n.to_string()) {
+                Some(s) => *s,
+                None => {
+                    panic!("Couldn't find {n} in symbol table!")
+                }
+            },
 
             Marlang::SetLogic(_)
             | Marlang::CheckSat
             | Marlang::Assert(_)
             | Marlang::DeclareConst(_)
+            | Marlang::DeclareFun(_)
+            | Marlang::DefineFun(_)
             | Marlang::Cons(_)
             | Marlang::Nil
             | Marlang::BoolSort
             | Marlang::IntSort
             | Marlang::RealSort
-            | Marlang::Symbol(_)
             | Marlang::StringSort => unreachable!("Should never check sort of commands!"),
 
             Marlang::BoolVal(_) => self.mk_bool_sort(),
@@ -252,6 +308,7 @@ impl MarProgram {
             commands: vec![],
             rewrites: vec![],
             runner: MRunner::default().with_egraph(mgraph),
+            symbol_table: SymbolTable::default(),
         }
     }
 
@@ -260,6 +317,7 @@ impl MarProgram {
     }
 
     pub fn extract(&mut self) -> MRecExpr {
+        self.runner.egraph.rebuild();
         let asg = self.asg();
         let extractor = egg::Extractor::new(&self.runner.egraph, egg::AstSize);
         let (_, best_expr) = extractor.find_best(asg);
@@ -284,14 +342,19 @@ impl MarProgram {
     }
 
     pub fn simplify(self, iter_limit: usize) -> Self {
-        let runner: MRunner = MRunner::default()
-            .with_egraph(self.runner.egraph)
-            .with_iter_limit(iter_limit)
-            .run(&self.rewrites);
-        Self {
-            runner,
-            rewrites: self.rewrites,
-            commands: self.commands,
+        if self.rewrites.len() > 0 {
+            let runner: MRunner = MRunner::default()
+                .with_egraph(self.runner.egraph)
+                .with_iter_limit(iter_limit)
+                .run(&self.rewrites);
+            Self {
+                runner,
+                rewrites: self.rewrites,
+                commands: self.commands,
+                symbol_table: self.symbol_table,
+            }
+        } else {
+            self
         }
     }
 
@@ -307,34 +370,86 @@ impl MarProgram {
 
 impl MarProgram {
     fn fold(&mut self, args: Vec<MId>) -> MId {
-        let start = self.mk_nil();
+        let (start, to_skip) = if args.last() == Some(&self.mk_rest()) {
+            (self.mk_rest(), 1)
+        } else {
+            (self.mk_nil(), 0)
+        };
         args.iter()
             .rev()
+            .skip(to_skip)
             .fold(start, |acc, x| self.mk_cons(*x, acc))
-    }
-
-    fn decompose(&self, ls: MId) -> Vec<MId> {
-        let mexpr = self.get_expr(ls);
-        let last = mexpr.as_ref().len() - 1;
-        self.decompose_rec(mexpr, last)
-    }
-
-    fn decompose_rec(&self, ls: MRecExpr, i: usize) -> Vec<MId> {
-        match ls.as_ref()[i] {
-            Marlang::Cons([x, s]) => {
-                let mut x = vec![x];
-                let mut rest = self.decompose_rec(ls, s.into());
-                x.append(&mut rest);
-                x
-            },
-            Marlang::Nil => vec![],
-            _ => unreachable!("Should never decompose a non-list!")
-        }
     }
 
     fn add(&mut self, x: Marlang) -> MId {
         let out = self.runner.egraph.add(x);
-        self.runner.egraph.rebuild();
         out
+    }
+}
+
+pub fn decompose(mexpr: &MRecExpr, ls: MId) -> Vec<MId> {
+    let last = ls.into();
+    decompose_rec(mexpr, last)
+}
+
+fn decompose_rec(mexpr: &MRecExpr, i: usize) -> Vec<MId> {
+    match mexpr.as_ref()[i] {
+        Marlang::Cons([x, s]) => {
+            let mut x = vec![x];
+            let mut rest = decompose_rec(mexpr, s.into());
+            x.append(&mut rest);
+            x
+        }
+        Marlang::Nil => vec![],
+        _ => unreachable!("Should never decompose a non-list!"),
+    }
+}
+
+#[derive(Debug)]
+pub struct SymbolTable<K, V> {
+    scopes: Vec<AHashMap<K, V>>,
+}
+
+impl<K, V> SymbolTable<K, V> {
+    pub fn new() -> Self {
+        Self {
+            scopes: vec![AHashMap::new()],
+        }
+    }
+
+    pub fn push_scope(&mut self) {
+        self.scopes.push(AHashMap::new());
+    }
+
+    pub fn pop_scope(&mut self) {
+        match self.scopes.len() {
+            0 => unreachable!(),
+            1 => {
+                panic!("cannot pop last scope in symbol table");
+            }
+            _ => {
+                self.scopes.pop().unwrap();
+            }
+        }
+    }
+}
+
+impl<K: Eq + Hash, V> SymbolTable<K, V> {
+    pub fn get<Q>(&self, key: &Q) -> Option<&V>
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash + ?Sized,
+    {
+        self.scopes.iter().rev().find_map(|scope| scope.get(key))
+    }
+
+    pub fn insert(&mut self, key: K, value: V) {
+        self.scopes.last_mut().unwrap().insert(key, value);
+    }
+}
+
+impl<K, V> Default for SymbolTable<K, V> {
+    fn default() -> Self {
+        Self::new()
     }
 }

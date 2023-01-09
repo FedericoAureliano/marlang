@@ -46,6 +46,8 @@ define_language! {
         "check-sat" = CheckSat,
         "assert" = Assert([Id; 1]),
         "declare-const" = DeclareConst([Id; 2]),
+        "declare-fun" = DeclareFun([Id; 3]),
+        "define-fun" = DefineFun([Id; 4]),
 
         "CONS" = Cons([Id; 2]),
         "NIL" = Nil,
