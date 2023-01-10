@@ -2,10 +2,10 @@ use marlang::*;
 
 #[test]
 fn add_zero() {
-    let mut program = MarProgram::new();
+    let mut program = MarContext::new();
 
-    let one = program.mk_int(1.into());
-    let zero = program.mk_int(0.into());
+    let one = program.mk_int_val(1.into());
+    let zero = program.mk_int_val(0.into());
     let x = program.mk_symbol("x".into());
     let one_plus_zero = program.mk_add(vec![one, zero]);
     let one_plus_zero_gt_0 = program.mk_gt(vec![one_plus_zero, zero]);

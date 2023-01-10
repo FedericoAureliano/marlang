@@ -1,55 +1,55 @@
-use egg::*;
+use egg::{define_language, merge_option, Analysis, DidMerge, Id, Language};
 
 use fxhash::FxHashSet as HashSet;
 use rug::{Integer, Rational};
 
-pub type MId = egg::Id;
-pub type MGraph = egg::EGraph<Marlang, MarAnalysis>;
-pub type MSymbol = egg::Symbol;
-pub type MRunner = egg::Runner<Marlang, MarAnalysis>;
-pub type MPattern = egg::Pattern<Marlang>;
-pub type MRecExpr = egg::RecExpr<Marlang>;
-pub type MRewrite = egg::Rewrite<Marlang, MarAnalysis>;
-pub type MPatternAst = egg::PatternAst<Marlang>;
-pub type MExplanation = egg::Explanation<Marlang>;
+pub type MarId = egg::Id;
+pub type MarGraph = egg::EGraph<Marlang, MarAnalysis>;
+pub type MarSymbol = egg::Symbol;
+pub type MarRunner = egg::Runner<Marlang, MarAnalysis>;
+pub type MarPattern = egg::Pattern<Marlang>;
+pub type MarRecExpr = egg::RecExpr<Marlang>;
+pub type MarRewrite = egg::Rewrite<Marlang, MarAnalysis>;
+pub type MarPatternAst = egg::PatternAst<Marlang>;
+pub type MarExplanation = egg::Explanation<Marlang>;
 
 define_language! {
     pub enum Marlang {
-        "var" = Var([Id; 2]),
+        "var" = Var([MarId; 2]),
 
         // BEGIN N-ARY
-        "+" = Add([Id; 1]),
-        "-" = Sub([Id; 1]),
-        "*" = Mul([Id; 1]),
-        "/" = RealDiv([Id; 1]),
+        "+" = Add([MarId; 1]),
+        "-" = Sub([MarId; 1]),
+        "*" = Mul([MarId; 1]),
+        "/" = RealDiv([MarId; 1]),
 
-        "=" = Eq([Id; 1]),
-        ">" = Gt([Id; 1]),
-        ">=" = Ge([Id; 1]),
-        "<" = Lt([Id; 1]),
-        "<=" = Le([Id; 1]),
+        "=" = Eq([MarId; 1]),
+        ">" = Gt([MarId; 1]),
+        ">=" = Ge([MarId; 1]),
+        "<" = Lt([MarId; 1]),
+        "<=" = Le([MarId; 1]),
 
-        "str.++" = Concat([Id; 1]),
+        "str.++" = Concat([MarId; 1]),
 
-        "and" = And([Id; 1]),
-        "or" = Or([Id; 1]),
-        "xor" = Xor([Id; 1]),
+        "and" = And([MarId; 1]),
+        "or" = Or([MarId; 1]),
+        "xor" = Xor([MarId; 1]),
 
-        "let" = Let([Id; 2]), // takes a list of lists (bindings) and a body
+        "let" = Let([MarId; 2]), // takes a list of lists (bindings) and a body
         // END N-ARY
 
-        "not" = Not([Id; 1]),
-        "=>" = Implies([Id; 2]),
-        "ite" = Ite([Id; 3]),
+        "not" = Not([MarId; 1]),
+        "=>" = Implies([MarId; 2]),
+        "ite" = Ite([MarId; 3]),
 
-        "set-logic" = SetLogic([Id; 1]),
+        "set-logic" = SetLogic([MarId; 1]),
         "check-sat" = CheckSat,
-        "assert" = Assert([Id; 1]),
-        "declare-const" = DeclareConst([Id; 2]),
-        "declare-fun" = DeclareFun([Id; 3]),
-        "define-fun" = DefineFun([Id; 4]),
+        "assert" = Assert([MarId; 1]),
+        "declare-const" = DeclareConst([MarId; 2]),
+        "declare-fun" = DeclareFun([MarId; 3]),
+        "define-fun" = DefineFun([MarId; 4]),
 
-        "CONS" = Cons([Id; 2]),
+        "CONS" = Cons([MarId; 2]),
         "NIL" = Nil,
 
         "Bool" = BoolSort,
@@ -60,9 +60,9 @@ define_language! {
         BoolVal(bool),
         IntVal(Integer),
         RealVal(Rational),
-        "str" = StringVal([Id; 1]), // To avoid clash with symbols since egg can't handle quotes
+        "str" = StringVal([MarId; 1]), // To avoid clash with symbols since egg can't handle quotes
 
-        Symbol(Symbol),
+        Symbol(MarSymbol),
     }
 }
 
@@ -70,19 +70,19 @@ define_language! {
 pub struct MarAnalysis;
 
 #[derive(Debug)]
-pub struct MData {
-    free: HashSet<Id>,
-    constant: Option<(Marlang, MPatternAst)>,
+pub struct MarData {
+    free: HashSet<MarId>,
+    constant: Option<(Marlang, MarPatternAst)>,
 }
 
-fn eval(_mgraph: &MGraph, _mnode: &Marlang) -> Option<(Marlang, MPatternAst)> {
+fn eval(_mgraph: &MarGraph, _mnode: &Marlang) -> Option<(Marlang, MarPatternAst)> {
     // TODO: write eval
     None
 }
 
 impl Analysis<Marlang> for MarAnalysis {
-    type Data = MData;
-    fn merge(&mut self, to: &mut MData, from: MData) -> DidMerge {
+    type Data = MarData;
+    fn merge(&mut self, to: &mut MarData, from: MarData) -> DidMerge {
         let before_len = to.free.len();
         // to.free.extend(from.free);
         to.free.retain(|i| from.free.contains(i));
@@ -96,14 +96,14 @@ impl Analysis<Marlang> for MarAnalysis {
         })
     }
 
-    fn make(egraph: &MGraph, enode: &Marlang) -> MData {
+    fn make(egraph: &MarGraph, enode: &Marlang) -> MarData {
         let mut free = HashSet::default();
         enode.for_each(|c| free.extend(&egraph[c].data.free));
         let constant = eval(egraph, enode);
-        MData { constant, free }
+        MarData { constant, free }
     }
 
-    fn modify(egraph: &mut MGraph, id: Id) {
+    fn modify(egraph: &mut MarGraph, id: MarId) {
         if let Some(c) = egraph[id].data.constant.clone() {
             if egraph.are_explanations_enabled() {
                 egraph.union_instantiations(
