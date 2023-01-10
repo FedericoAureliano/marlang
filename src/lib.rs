@@ -235,7 +235,6 @@ impl MarProgram {
         self.runner.egraph.rebuild();
         let mexpr = self.get_expr(term);
         let last = mexpr.as_ref().len() - 1;
-        println!("{:?}\nlast: {}", mexpr, last);
         self.infer_sort_rec(&mexpr, last)
     }
 
@@ -246,7 +245,7 @@ impl MarProgram {
             Marlang::IntSort => self.mk_int_sort(),
             Marlang::RealSort => self.mk_real_sort(),
             Marlang::StringSort => self.mk_string_sort(),
-            _ => unreachable!("Must be a sort!"),
+            _ => unreachable!("Must be a sort! Got {}", node),
         }
     }
 
@@ -282,7 +281,7 @@ impl MarProgram {
                     assert_eq!(pair.len(), 2);
                     let name: usize = pair[0].into();
                     let name = &expr.as_ref()[name];
-                    let sort = self.sort_to_id(expr, pair[1].into());
+                    let sort = self.infer_sort_rec(expr, pair[1].into());
                     match name {
                         Marlang::Symbol(s) => self.symbol_table.insert(s.to_string(), sort),
                         _ => {

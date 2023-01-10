@@ -43,7 +43,7 @@ fn mult_expr_sorts_real() {
 }
 
 #[test]
-fn div_error() {
+fn div_is_real() {
     let mut program = MarProgram::new();
     let real_sort = program.mk_real_sort();
 
@@ -55,5 +55,31 @@ fn div_error() {
         program.infer_sort(div),
         real_sort,
         "div must be a real number!"
+    );
+}
+
+#[test]
+fn let_sort() {
+    let mut program = MarProgram::new();
+
+    let bool_sort = program.mk_bool_sort();
+    let int_sort = program.mk_int_sort();
+
+    let x = program.mk_symbol("x".into());
+    let one = program.mk_int(1.into());
+    let two = program.mk_int(2.into());
+    let one_plus_x = program.mk_add(vec![one, x]);
+    let let_x = program.mk_let(vec![("x".into(), two)], one_plus_x);
+    assert_eq!(
+        program.infer_sort(let_x),
+        int_sort,
+        "Let expr should be an int!"
+    );
+
+    let gt_one = program.mk_gt(vec![let_x, one]);
+    assert_eq!(
+        program.infer_sort(gt_one),
+        bool_sort,
+        "Gt expr should be a bool!"
     );
 }
