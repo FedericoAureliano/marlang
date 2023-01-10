@@ -183,7 +183,8 @@ impl MarProgram {
     }
 
     pub fn mk_string(&mut self, i: String) -> MId {
-        self.add(Marlang::StringVal(i))
+        let s = self.mk_symbol(i);
+        self.add(Marlang::StringVal([s]))
     }
 
     pub fn mk_symbol(&mut self, name: String) -> MId {

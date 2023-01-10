@@ -60,7 +60,7 @@ define_language! {
         BoolVal(bool),
         IntVal(Integer),
         RealVal(Rational),
-        StringVal(String),
+        "str" = StringVal([Id; 1]), // To avoid clash with symbols since egg can't handle quotes
 
         Symbol(Symbol),
     }
