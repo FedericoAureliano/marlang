@@ -75,11 +75,6 @@ impl MarContext {
         self.add(Marlang::IntMul([folded]))
     }
 
-    pub fn mk_int_div(&mut self, args: Vec<MarId>) -> MarId {
-        let folded = self.fold(args);
-        self.add(Marlang::IntDiv([folded]))
-    }
-
     pub fn mk_int_gt(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
         self.add(Marlang::IntGt([folded]))
@@ -355,9 +350,9 @@ impl MarContext {
 
 impl fmt::Debug for MarContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "MarGraph:\n{:?}", self.runner.egraph.dump())?;
-        write!(f, "Commands:\n{:?}", self.commands)?;
-        write!(f, "Rewrites:\n{:?}", self.rewrites)
+        write!(f, "\nMarGraph:\n{:?}", self.runner.egraph.dump())?;
+        write!(f, "\nCommands: {:?}", self.commands)?;
+        write!(f, "\nRewrites: {:?}", self.rewrites)
     }
 }
 
@@ -381,6 +376,7 @@ fn decompose_using_expr_rec(mexpr: &MarRecExpr, i: usize) -> Vec<MarId> {
             x
         }
         Marlang::Nil => vec![],
+        Marlang::Symbol(_) => vec![i.into()], // rest pattern is sometimes in the last place
         _ => unreachable!("Should never decompose a non-list!"),
     }
 }

@@ -24,7 +24,6 @@ define_language! {
         "int.+" = IntAdd([MarId; 1]),
         "int.-" = IntSub([MarId; 1]),
         "int.*" = IntMul([MarId; 1]),
-        "int./" = IntDiv([MarId; 1]),
         "int.>" = IntGt([MarId; 1]),
         "int.>=" = IntGe([MarId; 1]),
         "int.<" = IntLt([MarId; 1]),
