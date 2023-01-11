@@ -20,49 +20,89 @@ impl MarContext {
         self.add(Marlang::Var([x, sort]))
     }
 
-    pub fn mk_add(&mut self, args: Vec<MarId>) -> MarId {
+    pub fn mk_real_add(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
-        self.add(Marlang::Add([folded]))
+        self.add(Marlang::RealAdd([folded]))
     }
 
-    pub fn mk_sub(&mut self, args: Vec<MarId>) -> MarId {
+    pub fn mk_real_sub(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
-        self.add(Marlang::Sub([folded]))
+        self.add(Marlang::RealSub([folded]))
     }
 
-    pub fn mk_mul(&mut self, args: Vec<MarId>) -> MarId {
+    pub fn mk_real_mul(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
-        self.add(Marlang::Mul([folded]))
+        self.add(Marlang::RealMul([folded]))
     }
 
-    pub fn mk_div(&mut self, args: Vec<MarId>) -> MarId {
+    pub fn mk_real_div(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
         self.add(Marlang::RealDiv([folded]))
+    }
+
+    pub fn mk_real_gt(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::RealGt([folded]))
+    }
+
+    pub fn mk_real_ge(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::RealGe([folded]))
+    }
+
+    pub fn mk_real_lt(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::RealLt([folded]))
+    }
+
+    pub fn mk_real_le(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::RealLe([folded]))
+    }
+
+    pub fn mk_int_add(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntAdd([folded]))
+    }
+
+    pub fn mk_int_sub(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntSub([folded]))
+    }
+
+    pub fn mk_int_mul(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntMul([folded]))
+    }
+
+    pub fn mk_int_div(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntDiv([folded]))
+    }
+
+    pub fn mk_int_gt(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntGt([folded]))
+    }
+
+    pub fn mk_int_ge(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntGe([folded]))
+    }
+
+    pub fn mk_int_lt(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntLt([folded]))
+    }
+
+    pub fn mk_int_le(&mut self, args: Vec<MarId>) -> MarId {
+        let folded = self.fold(args);
+        self.add(Marlang::IntLe([folded]))
     }
 
     pub fn mk_eq(&mut self, args: Vec<MarId>) -> MarId {
         let folded = self.fold(args);
         self.add(Marlang::Eq([folded]))
-    }
-
-    pub fn mk_gt(&mut self, args: Vec<MarId>) -> MarId {
-        let folded = self.fold(args);
-        self.add(Marlang::Gt([folded]))
-    }
-
-    pub fn mk_ge(&mut self, args: Vec<MarId>) -> MarId {
-        let folded = self.fold(args);
-        self.add(Marlang::Ge([folded]))
-    }
-
-    pub fn mk_lt(&mut self, args: Vec<MarId>) -> MarId {
-        let folded = self.fold(args);
-        self.add(Marlang::Lt([folded]))
-    }
-
-    pub fn mk_le(&mut self, args: Vec<MarId>) -> MarId {
-        let folded = self.fold(args);
-        self.add(Marlang::Le([folded]))
     }
 
     pub fn mk_concat(&mut self, args: Vec<MarId>) -> MarId {
@@ -311,24 +351,6 @@ impl MarContext {
         let out = self.runner.egraph.add(x);
         out
     }
-
-    pub fn decompose(&self, mexpr: &MarRecExpr, ls: MarId) -> Vec<MarId> {
-        let last = ls.into();
-        self.decompose_rec(mexpr, last)
-    }
-
-    fn decompose_rec(&self, mexpr: &MarRecExpr, i: usize) -> Vec<MarId> {
-        match mexpr.as_ref()[i] {
-            Marlang::Cons([x, s]) => {
-                let mut x = vec![x];
-                let mut rest = self.decompose_rec(mexpr, s.into());
-                x.append(&mut rest);
-                x
-            }
-            Marlang::Nil => vec![],
-            _ => unreachable!("Should never decompose a non-list!"),
-        }
-    }
 }
 
 impl fmt::Debug for MarContext {
@@ -336,5 +358,29 @@ impl fmt::Debug for MarContext {
         write!(f, "MarGraph:\n{:?}", self.runner.egraph.dump())?;
         write!(f, "Commands:\n{:?}", self.commands)?;
         write!(f, "Rewrites:\n{:?}", self.rewrites)
+    }
+}
+
+pub fn decompose_using_graph(mgraph: &MarGraph, ls: MarId) -> Vec<MarId> {
+    let mexpr = mgraph.id_to_expr(ls);
+    let last = mexpr.as_ref().len() - 1;
+    decompose_using_expr_rec(&mexpr, last)
+}
+
+pub fn decompose_using_expr(mexpr: &MarRecExpr, ls: MarId) -> Vec<MarId> {
+    let last = ls.into();
+    decompose_using_expr_rec(mexpr, last)
+}
+
+fn decompose_using_expr_rec(mexpr: &MarRecExpr, i: usize) -> Vec<MarId> {
+    match mexpr.as_ref()[i] {
+        Marlang::Cons([x, s]) => {
+            let mut x = vec![x];
+            let mut rest = decompose_using_expr_rec(mexpr, s.into());
+            x.append(&mut rest);
+            x
+        }
+        Marlang::Nil => vec![],
+        _ => unreachable!("Should never decompose a non-list!"),
     }
 }
