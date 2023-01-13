@@ -350,9 +350,9 @@ impl MarContext {
 
 impl fmt::Debug for MarContext {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\nMarGraph:\n{:?}", self.runner.egraph.dump())?;
-        write!(f, "\nCommands: {:?}", self.commands)?;
-        write!(f, "\nRewrites: {:?}", self.rewrites)
+        writeln!(f, "MarGraph:\n{:?}", self.runner.egraph.dump())?;
+        writeln!(f, "Commands: {:?}", self.commands)?;
+        writeln!(f, "Rewrites: {:?}", self.rewrites)
     }
 }
 
