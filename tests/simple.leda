@@ -1,0 +1,35 @@
+LEDA.GRAPH
+string
+string
+-1
+
+# Nodes Section
+12
+|{marlang.meta.nil}|
+|{0}|
+|{marlang.value.int}|
+|{marlang.meta.cons}|
+|{1}|
+|{marlang.value.int}|
+|{marlang.meta.cons}|
+|{marlang.operator.int.+}|
+|{marlang.meta.cons}|
+|{marlang.operator.int.>}|
+|{marlang.command.assert}|
+|{marlang.meta.cons}|
+
+# Edges Section
+13
+3 2 0 |{child}|
+4 1 0 |{child}|
+4 3 0 |{child}|
+6 5 0 |{child}|
+7 4 0 |{child}|
+7 6 0 |{child}|
+8 7 0 |{child}|
+9 4 0 |{child}|
+9 8 0 |{child}|
+10 9 0 |{child}|
+11 10 0 |{child}|
+12 1 0 |{child}|
+12 11 0 |{child}|

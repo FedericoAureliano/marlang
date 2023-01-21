@@ -1,6 +1,10 @@
-use std::io::BufWriter;
+use std::{fs, io::BufWriter};
 
-use marlang::{ast::MarRecExpr, context::MarContext, util::write_leda};
+use marlang::{
+    ast::MarRecExpr,
+    context::MarContext,
+    util::{read_leda, write_leda},
+};
 
 #[test]
 fn parse_print_symbol_and_string() {
@@ -16,7 +20,7 @@ fn parse_print_symbol_and_string() {
 }
 
 #[test]
-fn leda_constant_add() {
+fn leda_write() {
     let mut program = MarContext::new();
 
     let one = program.mk_int_val(1);
@@ -27,48 +31,20 @@ fn leda_constant_add() {
 
     let mut buffer = BufWriter::new(Vec::new());
     let program = program.extract();
+
     write_leda(&mut buffer, &program).expect("Must be able to write program to buffer");
 
     let output = std::str::from_utf8(buffer.buffer()).unwrap().to_string();
-
-    let expected = "LEDA.GRAPH
-string
-string
--1
-
-# Nodes Section
-13
-|{marlang.meta.nil}|
-|{0}|
-|{marlang.value.int}|
-|{marlang.meta.cons}|
-|{1}|
-|{marlang.value.int}|
-|{marlang.meta.cons}|
-|{marlang.operator.int.+}|
-|{marlang.meta.cons}|
-|{marlang.operator.int.>}|
-|{marlang.command.assert}|
-|{marlang.meta.cons}|
-|{start}|
-
-# Edges Section
-14
-3 2 0 |{child}|
-4 1 0 |{child}|
-4 3 0 |{child}|
-6 5 0 |{child}|
-7 4 0 |{child}|
-7 6 0 |{child}|
-8 7 0 |{child}|
-9 4 0 |{child}|
-9 8 0 |{child}|
-10 9 0 |{child}|
-11 10 0 |{child}|
-12 1 0 |{child}|
-12 11 0 |{child}|
-13 12 0 |{child}|
-";
-
+    let expected =
+        fs::read_to_string("tests/simple.leda").expect("File must exist and be readable");
     assert_eq!(expected, output);
+}
+
+#[test]
+fn leda_read() {
+    let input = fs::read_to_string("tests/simple.leda").expect("File must exist and be readable");
+    let expected =
+        fs::read_to_string("tests/simple.marlang").expect("File must exist and be readable");
+    let parsed = read_leda(&mut input.as_bytes()).expect("Must be able to parse program");
+    assert_eq!(expected, parsed.to_string());
 }

@@ -1,0 +1,1 @@
+(marlang.meta.cons (marlang.command.assert (marlang.operator.int.> (marlang.meta.cons (marlang.operator.int.+ (marlang.meta.cons (marlang.value.int 1) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil))) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil)))) marlang.meta.nil)
