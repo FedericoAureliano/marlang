@@ -349,6 +349,15 @@ impl MarContext {
         let out = self.runner.egraph.add(x);
         out
     }
+
+    pub fn add_recexpr(&mut self, x: MarRecExpr) -> MarId {
+        let out = self.runner.egraph.add_expr(&x);
+        out
+    }
+
+    pub fn graph(&self) -> &MarGraph {
+        &self.runner.egraph
+    }
 }
 
 impl fmt::Debug for MarContext {
