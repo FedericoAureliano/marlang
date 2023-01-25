@@ -141,7 +141,7 @@ pub fn read_leda<T: Read>(source: &mut T) -> io::Result<MarRecExpr> {
             .collect::<Vec<MarId>>();
 
         match node.as_str() {
-            "marlang.function" => mexpr.add(Marlang::Function([children[0], children[1]])),
+            "marlang.function.call" => mexpr.add(Marlang::Call([children[0], children[1]])),
             "marlang.operator.int.+" => mexpr.add(Marlang::IntAdd([children[0]])),
             "marlang.operator.int.-" => mexpr.add(Marlang::IntSub([children[0]])),
             "marlang.operator.int.*" => mexpr.add(Marlang::IntMul([children[0]])),
@@ -172,7 +172,8 @@ pub fn read_leda<T: Read>(source: &mut T) -> io::Result<MarRecExpr> {
             "marlang.command.check-sat" => mexpr.add(Marlang::CheckSat),
             "marlang.command.assert" => mexpr.add(Marlang::Assert([children[0]])),
             "marlang.command.declare-const" => {
-                mexpr.add(Marlang::DeclareConst([children[0], children[1]]))
+                let empty = mexpr.add(Marlang::Nil);
+                mexpr.add(Marlang::DeclareFun([children[0], empty, children[1]]))
             }
             "marlang.command.declare-fun" => {
                 mexpr.add(Marlang::DeclareFun([children[0], children[1], children[2]]))

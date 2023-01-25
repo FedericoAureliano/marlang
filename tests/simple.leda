@@ -4,32 +4,41 @@ string
 -1
 
 # Nodes Section
-12
+15
 |{marlang.meta.nil}|
 |{0}|
 |{marlang.value.int}|
 |{marlang.meta.cons}|
-|{1}|
-|{marlang.value.int}|
+|{marlang.sort.int}|
+|{x}|
+|{marlang.command.declare-fun}|
+|{marlang.function.call}|
 |{marlang.meta.cons}|
 |{marlang.operator.int.+}|
 |{marlang.meta.cons}|
 |{marlang.operator.int.>}|
 |{marlang.command.assert}|
 |{marlang.meta.cons}|
+|{marlang.meta.cons}|
 
 # Edges Section
-13
+19
 3 2 0 |{child}|
 4 1 0 |{child}|
 4 3 0 |{child}|
-6 5 0 |{child}|
-7 4 0 |{child}|
+7 5 0 |{child}|
+7 1 0 |{child}|
 7 6 0 |{child}|
+8 1 0 |{child}|
 8 7 0 |{child}|
 9 4 0 |{child}|
 9 8 0 |{child}|
 10 9 0 |{child}|
+11 4 0 |{child}|
 11 10 0 |{child}|
-12 1 0 |{child}|
 12 11 0 |{child}|
+13 12 0 |{child}|
+14 1 0 |{child}|
+14 13 0 |{child}|
+15 14 0 |{child}|
+15 7 0 |{child}|

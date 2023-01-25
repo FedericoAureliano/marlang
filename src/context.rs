@@ -15,9 +15,8 @@ pub struct MarContext {
 }
 
 impl MarContext {
-    pub fn mk_var(&mut self, name: String, sort: MarId) -> MarId {
-        let x = self.mk_symbol(name);
-        self.add(Marlang::Function([x, sort]))
+    pub fn mk_call(&mut self, def: MarId, args: MarId) -> MarId {
+        self.add(Marlang::Call([def, args]))
     }
 
     pub fn mk_real_add(&mut self, args: Vec<MarId>) -> MarId {
@@ -157,21 +156,27 @@ impl MarContext {
         self.add(Marlang::Assert([expr]))
     }
 
-    pub fn mk_declare_const(&mut self, name: String, sort: MarId) -> MarId {
+    pub fn mk_declare_const<T: ToString>(&mut self, name: T, sort: MarId) -> MarId {
         let x = self.mk_symbol(name);
-        self.add(Marlang::DeclareConst([x, sort]))
+        let empty = self.mk_nil();
+        self.add(Marlang::DeclareFun([x, empty, sort]))
     }
 
-    pub fn mk_declare_fun(&mut self, name: String, params: Vec<MarId>, sort: MarId) -> MarId {
+    pub fn mk_declare_fun<T: ToString>(
+        &mut self,
+        name: T,
+        params: Vec<MarId>,
+        sort: MarId,
+    ) -> MarId {
         let params = self.fold(params);
         let f = self.mk_symbol(name);
         self.add(Marlang::DeclareFun([f, params, sort]))
     }
 
-    pub fn mk_define_fun(
+    pub fn mk_define_fun<T: ToString>(
         &mut self,
-        name: String,
-        params: Vec<(String, MarId)>,
+        name: T,
+        params: Vec<(T, MarId)>,
         sort: MarId,
         body: MarId,
     ) -> MarId {
@@ -223,8 +228,8 @@ impl MarContext {
         self.add(Marlang::StringVal([s]))
     }
 
-    pub fn mk_symbol(&mut self, name: String) -> MarId {
-        self.add(Marlang::Symbol(name.into()))
+    pub fn mk_symbol<T: ToString>(&mut self, name: T) -> MarId {
+        self.add(Marlang::Symbol(name.to_string().into()))
     }
 
     pub fn mk_cons(&mut self, x: MarId, y: MarId) -> MarId {
@@ -236,29 +241,33 @@ impl MarContext {
     }
 
     pub fn mk_rest(&mut self) -> MarId {
-        self.mk_symbol("?MARLANG_REST_PATTERN".into())
+        self.mk_symbol("?MARLANG_REST_PATTERN")
     }
 }
 
 impl MarContext {
-    pub fn set_logic(&mut self, logic: String) {
+    pub fn set_logic(&mut self, logic: String) -> MarId {
         let c = self.mk_set_logic(logic);
-        self.commands.push(c)
+        self.commands.push(c);
+        c
     }
 
-    pub fn check_sat(&mut self) {
+    pub fn check_sat(&mut self) -> MarId {
         let c = self.mk_check_sat();
-        self.commands.push(c)
+        self.commands.push(c);
+        c
     }
 
-    pub fn assert(&mut self, expr: MarId) {
+    pub fn assert(&mut self, expr: MarId) -> MarId {
         let c = self.mk_assert(expr);
-        self.commands.push(c)
+        self.commands.push(c);
+        c
     }
 
-    pub fn declare_const(&mut self, name: String, sort: MarId) {
+    pub fn declare_const<T: ToString>(&mut self, name: T, sort: MarId) -> MarId {
         let c = self.mk_declare_const(name, sort);
-        self.commands.push(c)
+        self.commands.push(c);
+        c
     }
 
     pub fn commit(&mut self, command: MarId) {

@@ -17,7 +17,7 @@ pub type MarExplanation = egg::Explanation<Marlang>;
 
 define_language! {
     pub enum Marlang {
-        "marlang.function" = Function([MarId; 2]),
+        "marlang.function.call" = Call([MarId; 2]), // point to def/dec/let and then args
 
         // BEGIN N-ARY
         "marlang.operator.int.+" = IntAdd([MarId; 1]),
@@ -55,7 +55,6 @@ define_language! {
         "marlang.command.set-logic" = SetLogic([MarId; 1]),
         "marlang.command.check-sat" = CheckSat,
         "marlang.command.assert" = Assert([MarId; 1]),
-        "marlang.command.declare-const" = DeclareConst([MarId; 2]),
         "marlang.command.declare-fun" = DeclareFun([MarId; 3]),
         "marlang.command.define-fun" = DefineFun([MarId; 4]),
 
@@ -99,7 +98,7 @@ impl Analysis<Marlang> for MarAnalysis {
         let f = |i: &Id| egraph[*i].data.free.iter().cloned();
         let mut free = HashSet::default();
         match enode {
-            Marlang::Function([n, _]) => {
+            Marlang::Call([n, _]) => {
                 free.insert(*n);
             }
             Marlang::Let([bindings, body]) => {
