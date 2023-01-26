@@ -30,8 +30,7 @@ fn decompose_using_expr_rec(mexpr: &MarRecExpr, i: usize) -> Vec<MarId> {
             x
         }
         Marlang::Nil => vec![],
-        Marlang::Symbol(_) => vec![i.into()], // rest pattern is sometimes in the last place
-        _ => unreachable!("Should never decompose a non-list!"),
+        _ => vec![i.into()],
     }
 }
 
