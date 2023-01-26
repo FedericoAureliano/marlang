@@ -7,7 +7,6 @@ use crate::util::decompose_using_graph;
 pub type MarId = egg::Id;
 pub type MarVar = egg::Var;
 pub type MarGraph = egg::EGraph<Marlang, MarAnalysis>;
-pub type MarSymbol = egg::Symbol;
 pub type MarRunner = egg::Runner<Marlang, MarAnalysis>;
 pub type MarPattern = egg::Pattern<Marlang>;
 pub type MarRecExpr = egg::RecExpr<Marlang>;
@@ -71,7 +70,7 @@ define_language! {
         "marlang.value.real" = RealVal([MarId; 1]),
         "marlang.value.string" = StringVal([MarId; 1]),
 
-        Symbol(MarSymbol),
+        Symbol(String),
     }
 }
 

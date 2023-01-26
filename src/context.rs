@@ -229,7 +229,7 @@ impl MarContext {
     }
 
     pub fn mk_symbol<T: ToString>(&mut self, name: T) -> MarId {
-        self.add(Marlang::Symbol(name.to_string().into()))
+        self.add(Marlang::Symbol(name.to_string()))
     }
 
     pub fn mk_cons(&mut self, x: MarId, y: MarId) -> MarId {

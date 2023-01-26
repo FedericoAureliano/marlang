@@ -31,3 +31,14 @@ fn add_zero() {
         "(marlang.meta.cons (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) (marlang.meta.cons (marlang.command.assert (marlang.operator.int.> (marlang.meta.cons (marlang.function.call (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) marlang.meta.nil) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil)))) marlang.meta.nil))"
     )
 }
+
+#[test]
+fn same_symbol() {
+    let mut program = MarContext::new();
+    let int_sort = program.mk_int_sort();
+    let decl = program.mk_declare_const("test", int_sort);
+    let empty = program.mk_nil();
+    let first = program.mk_call(decl, empty);
+    let second = program.mk_call(decl, empty);
+    assert_eq!(first, second);
+}
