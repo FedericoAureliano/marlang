@@ -1,4 +1,7 @@
+use rand::Rng;
+
 use std::{
+    collections::HashMap,
     io::{self, Read, Write},
     usize,
 };
@@ -199,4 +202,107 @@ pub fn read_leda<T: Read>(source: &mut T) -> io::Result<MarRecExpr> {
     }
 
     Ok(mexpr)
+}
+
+pub fn sample<R: Rng>(rng: &mut R, original_mexpr: &MarRecExpr, max_depth: usize) -> MarRecExpr {
+    let nodes = original_mexpr.as_ref().to_owned();
+    let position = rng.gen_range(0..nodes.len());
+
+    let node = original_mexpr.as_ref().to_owned()[position].clone();
+
+    match node {
+        Marlang::Cons(_) | Marlang::Nil | Marlang::Symbol(_) => {
+            // don't ever sample just a meta operator or symbol at the top
+            return sample(rng, original_mexpr, max_depth.checked_sub(1).unwrap_or(0));
+        }
+        _ => (),
+    };
+
+    let mut output_mexpr = MarRecExpr::default();
+
+    sample_helper(
+        rng,
+        &mut output_mexpr,
+        original_mexpr,
+        max_depth,
+        &(position.into()),
+        &mut HashMap::new(),
+    );
+
+    output_mexpr
+}
+
+fn sample_helper<R: Rng>(
+    rng: &mut R,
+    output_mexpr: &mut MarRecExpr,
+    original_mexpr: &MarRecExpr,
+    max_depth: usize,
+    position: &MarId,
+    patterns: &mut HashMap<Marlang, Marlang>,
+) -> MarId {
+    let position: usize = (*position).into();
+    let mut node = original_mexpr.as_ref().to_owned()[position].clone();
+
+    match node {
+        Marlang::Cons([a, b]) => {
+            let cons = Marlang::Cons([
+                sample_helper(rng, output_mexpr, original_mexpr, max_depth, &a, patterns),
+                sample_helper(rng, output_mexpr, original_mexpr, max_depth, &b, patterns),
+            ]);
+            return output_mexpr.add(cons);
+        }
+        Marlang::DeclareFun([n, ps, s]) => {
+            let declare_fun = Marlang::DeclareFun([
+                sample_helper(rng, output_mexpr, original_mexpr, max_depth, &n, patterns),
+                sample_helper(rng, output_mexpr, original_mexpr, max_depth, &ps, patterns),
+                sample_helper(rng, output_mexpr, original_mexpr, max_depth, &s, patterns),
+            ]);
+            return output_mexpr.add(declare_fun);
+        }
+        Marlang::SetLogic([s]) => {
+            let set_logic = Marlang::SetLogic([sample_helper(
+                rng,
+                output_mexpr,
+                original_mexpr,
+                max_depth,
+                &s,
+                patterns,
+            )]);
+            return output_mexpr.add(set_logic);
+        }
+        node if node.children().len() == 0 => return output_mexpr.add(node),
+        node if max_depth == 0 && patterns.contains_key(&node) => {
+            return output_mexpr.add(patterns[&node].clone());
+        }
+        node if max_depth == 0 => {
+            let pattern = Marlang::Symbol(random_pattern_variable(rng).into());
+            patterns.insert(node.clone(), pattern.clone());
+            return output_mexpr.add(pattern);
+        }
+        _ => (),
+    }
+
+    for i in 0..node.children().len() {
+        let child = node.children()[i];
+        let new_child_position = sample_helper(
+            rng,
+            output_mexpr,
+            original_mexpr,
+            max_depth - 1,
+            &(child.into()),
+            patterns,
+        );
+        node.children_mut()[i] = new_child_position;
+    }
+
+    output_mexpr.add(node)
+}
+
+fn random_pattern_variable<R: Rng>(rng: &mut R) -> String {
+    let mut s = String::new();
+    s.insert_str(0, "?marlang.fresh.");
+    for _ in 0..10 {
+        s.push(rng.gen_range('a'..'z'));
+    }
+    s
 }
