@@ -104,8 +104,14 @@ impl Analysis<Marlang> for MarAnalysis {
                 free.extend(f(body));
 
                 let bindings = decompose_using_graph(egraph, *bindings);
+                let bindings = decompose_using_graph(egraph, bindings[0]);
                 for pair in bindings {
                     let pair = decompose_using_graph(egraph, pair);
+                    if pair.len() == 0 {
+                        continue;
+                    } else if pair.len() == 2 {
+                        panic!("malformed let binding");
+                    }
                     free.remove(&pair[0]);
                     free.extend(f(&pair[1]));
                 }
