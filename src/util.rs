@@ -8,13 +8,7 @@ use std::{
 
 use egg::Language;
 
-use crate::ast::{MarGraph, MarId, MarRecExpr, Marlang};
-
-pub fn decompose_using_graph(mgraph: &MarGraph, ls: MarId) -> Vec<MarId> {
-    let mexpr = mgraph.id_to_expr(ls);
-    let last = mexpr.as_ref().len() - 1;
-    decompose_using_expr_rec(&mexpr, last)
-}
+use crate::ast::{MarId, MarRecExpr, Marlang};
 
 pub fn decompose_using_expr(mexpr: &MarRecExpr, ls: MarId) -> Vec<MarId> {
     let last = ls.into();

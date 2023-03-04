@@ -1,8 +1,6 @@
-use egg::{define_language, Analysis, DidMerge, Id, Language};
+use egg::{define_language, Analysis, DidMerge, Id};
 
 use fxhash::FxHashSet as HashSet;
-
-use crate::util::decompose_using_graph;
 
 pub type MarId = egg::Id;
 pub type MarVar = egg::Var;
@@ -93,31 +91,8 @@ impl Analysis<Marlang> for MarAnalysis {
         )
     }
 
-    fn make(egraph: &MarGraph, enode: &Marlang) -> MarData {
-        let f = |i: &Id| egraph[*i].data.free.iter().cloned();
-        let mut free = HashSet::default();
-        match enode {
-            Marlang::Call([n, _]) => {
-                free.insert(*n);
-            }
-            Marlang::Let([bindings, body]) => {
-                free.extend(f(body));
-
-                let bindings = decompose_using_graph(egraph, *bindings);
-                let bindings = decompose_using_graph(egraph, bindings[0]);
-                for pair in bindings {
-                    let pair = decompose_using_graph(egraph, pair);
-                    if pair.len() == 0 {
-                        continue;
-                    } else if pair.len() == 2 {
-                        panic!("malformed let binding");
-                    }
-                    free.remove(&pair[0]);
-                    free.extend(f(&pair[1]));
-                }
-            }
-            _ => enode.for_each(|c| free.extend(&egraph[c].data.free)),
-        }
+    fn make(_egraph: &MarGraph, _enode: &Marlang) -> MarData {
+        let free = HashSet::default();
         MarData { free }
     }
 }
