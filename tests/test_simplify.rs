@@ -14,7 +14,7 @@ fn add_zero() {
     program.assert(one_plus_zero_gt_0);
 
     assert_eq!(
-        program.extract().to_string(),
+        program.extract_best().to_string(),
         "(marlang.meta.cons (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) (marlang.meta.cons (marlang.command.assert (marlang.operator.int.> (marlang.meta.cons (marlang.operator.int.+ (marlang.meta.cons (marlang.function.call (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) marlang.meta.nil) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil))) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil)))) marlang.meta.nil))"
     );
 
@@ -27,7 +27,7 @@ fn add_zero() {
     let mut program = program.simplify(1);
 
     assert_eq!(
-        program.extract().to_string(),
+        program.extract_best().to_string(),
         "(marlang.meta.cons (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) (marlang.meta.cons (marlang.command.assert (marlang.operator.int.> (marlang.meta.cons (marlang.function.call (marlang.command.declare-fun y marlang.meta.nil marlang.sort.int) marlang.meta.nil) (marlang.meta.cons (marlang.value.int 0) marlang.meta.nil)))) marlang.meta.nil))"
     )
 }

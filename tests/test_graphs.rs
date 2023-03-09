@@ -21,7 +21,7 @@ fn leda_write() {
     program.assert(x_plus_zero_gt_0);
 
     let mut buffer = BufWriter::new(Vec::new());
-    let program = program.extract();
+    let program = program.extract_best();
 
     write_leda(&mut buffer, &program).expect("Must be able to write program to buffer");
 

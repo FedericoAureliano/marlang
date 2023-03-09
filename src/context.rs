@@ -289,12 +289,25 @@ impl MarContext {
         self.fold(self.commands.clone())
     }
 
-    pub fn extract(&mut self) -> MarRecExpr {
-        self.runner.egraph.rebuild();
+    pub fn extract_best(&mut self) -> MarRecExpr {
+        println!("Getting asg...");
         let asg = self.asg();
+        println!("Rebuilding...");
+        self.runner.egraph.rebuild();
+        println!("Making Extractor...");
         let extractor = egg::Extractor::new(&self.runner.egraph, egg::AstSize);
+        println!("Extracting...");
         let (_, best_expr) = extractor.find_best(asg);
         best_expr
+    }
+
+    pub fn extract_any(&mut self) -> MarRecExpr {
+        println!("Getting asg...");
+        let asg = self.asg();
+        println!("Rebuilding...");
+        self.runner.egraph.rebuild();
+        println!("Getting expr...");
+        self.get_expr(asg)
     }
 
     pub fn get_expr(&self, expr: MarId) -> MarRecExpr {
